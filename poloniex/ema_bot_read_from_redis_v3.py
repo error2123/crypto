@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Window length for moving average
 rsi_window_length = 14
+currency_pair = "USDT_BTC"
 
 # bin limits for the histogram @todo change it when playing with a bigger amount
 negative = -500
@@ -379,9 +380,10 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
 while(True):
     dates = []
     for x in xrange(int(sys.argv[1])):
-        dates.append((datetime.date.today() - datetime.timedelta(x)).strftime('%Y-%m-%d'))
+        dates.append("{}###{}".format(currency_pair, (datetime.date.today() - datetime.timedelta(x)).strftime('%Y-%m-%d')))
     logger.info("Getting Datapoints for folllowing dates: {}".format(dates))
     full_chart = batch_read_from_cache(dates)
+    full_chart = {key.split("###")[1]:full_chart[key]  for key in full_chart}
     df = pandas.DataFrame.from_dict(full_chart, orient="index")
     logger.info("DF: {}".format(df))
     df = df.sort_values(['date'])

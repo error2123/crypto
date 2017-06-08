@@ -37,7 +37,7 @@ batch_write_to_cache(full_chart)
 while(True):
     logger.info("Start time: {} End time: {}".format(t_start, t_end))
     resp = P.returnChartData(currencyPair="USDT_BTC", start=t_start, end=t_end, period=INTERVAL)
-    resp = {'{}'.format(datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
+    resp = {'{}###{}'.format("USDT_BTC", datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
     logger.info("RESP: {}".format(resp))
     batch_write_to_cache(resp)
     # @todo @logicissues. How to reduce latency in getting new candlesticks but by keeping the

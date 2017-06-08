@@ -29,7 +29,7 @@ while(tmp_end < end_ut):
     logger.info("Start time: {} End time: {}".format(datetime.datetime.fromtimestamp(tmp_start),
                                                      datetime.datetime.fromtimestamp(tmp_end)))
     resp = P.returnChartData(currencyPair="USDT_BTC", start=tmp_start, end=tmp_end, period=INTERVAL)
-    resp = {'{}'.format(datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r)
+    resp = {'{}###{}'.format("USDT_BTC", datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r)
             for r in resp}
     logger.info("RESP: {}".format(resp))
     batch_write_to_cache(resp)
