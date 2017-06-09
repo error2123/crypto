@@ -8,6 +8,7 @@ import pandas
 import time
 from redis_client import batch_read_from_cache
 import numpy as np
+from collections import deque
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -33,12 +34,16 @@ logger = logging.getLogger(__name__)
 rsi_window_length = 14
 currency_pair = "USDT_BTC"
 
+#current candlestick period
+candle_period = 5
+
+
 # bin limits for the histogram @todo change it when playing with a bigger amount
 negative = -500
 positive = 500
 
 # ewma upper and lower bound
-lb = 30
+lb = 20
 ub = 70
 
 
@@ -61,7 +66,7 @@ def render_plotly(df, rsi, rsi_orders, lower_bound, upper_bound, chart_name='can
     trace_volume = go.Scatter(x=dates, y=[float(df.loc[x].loc['volume']) for x in df.index], name='volume')
     avg_vol = np.mean(df["volume"])
     trace_avg_volume = go.Scatter(x=dates, y=[avg_vol for x in dates], name='avg_volume')
-    
+    trace_mavg_volume = go.Scatter(x=dates, y=[float(df.loc[x].loc['moving_avg_vol']) for x in df.index], name='avg_volume')
     
     pnl = rsi_orders[3]
     stats_dict = {}
@@ -75,12 +80,12 @@ def render_plotly(df, rsi, rsi_orders, lower_bound, upper_bound, chart_name='can
     print stats_dict
     #stats_dict["Bought_sold"] = "{}".format([
     perf = pandas.DataFrame.from_dict({"performance": stats_dict}, orient="columns").to_html()
-    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_performance.html", "w") as fw:
+    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_volume_performance.html", "w") as fw:
         fw.write(perf)
     
     data = [trace, trace_buys, trace_sells]
     data_rsi = [trace_rsi_ewma, trace_lb, trace_ub, trace_rsi_val]
-    data_volume = [trace_volume, trace_avg_volume]
+    data_volume = [trace_volume, trace_avg_volume, trace_mavg_volume]
     fig = tools.make_subplots(rows=4, cols=1)
     [fig.append_trace(d, 1, 1) for d in data]
     [fig.append_trace(d, 3, 1) for d in data_rsi]
@@ -89,6 +94,18 @@ def render_plotly(df, rsi, rsi_orders, lower_bound, upper_bound, chart_name='can
     fig.append_trace(go.Histogram(x=rsi_orders[3], name="rsi", autobinx=False, xbins=dict(start=negative, end=positive,size=5)), 2, 1)
     offline.plot(fig, filename=chart_name, auto_open=False)
 
+
+
+def add_avg_volume_24hr(df):
+    volume_tracker = deque(maxlen=24 * 60 /5)
+    volume_init = 150000
+    [volume_tracker.append(volume_init) for x in xrange(0, 24 * 60 /5)]
+    avg_volume = []
+    for x in df.index:
+        volume_tracker.append(df.loc[x].loc['volume'])
+        avg_volume.append(sum(volume_tracker)/len(volume_tracker))
+    avg_v_s = pandas.Series(avg_volume, df.index)
+    df['moving_avg_vol'] = avg_v_s
 
 def compute_rsi(df):
 
@@ -134,17 +151,18 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
     entered_buy_zone = False
     entered_sell_zone = False
     for x in xrange(1, len(indexes)):
-        if entered_buy_zone:
             # if we are still in the zone and rsi starts increasing, BUY IT!
             # or if we stepping outside the zone buy it as well
-            if (rsi_sma[indexes[x]] < min and rsi_sma[indexes[x]] > previous) or rsi_sma[indexes[x]] >= min:
+            #if ((rsi_sma[indexes[x]] < min and rsi_sma[indexes[x]] > previous) or rsi_sma[indexes[x]] >= min) and df.loc[indexes[x]].loc['volume'] > 8 * df.loc[indexes[x]].loc['moving_avg_vol']:
+        if rsi_sma[indexes[x]] < min and df.loc[indexes[x]].loc['volume'] > 2 * df.loc[indexes[x]].loc['moving_avg_vol'] and bought is False:
                 bought_at, bought_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 buys.append((bought_at, bought_time))
                 bought = True
                 rsi_l.append((rsi_sma[indexes[x]], bought_time))
                 entered_buy_zone = False
-        elif entered_sell_zone:
-            if (rsi_sma[indexes[x]] > max and rsi_sma[indexes[x] < previous]) or rsi_sma[indexes[x]] <= max:
+        
+            #if ((rsi_sma[indexes[x]] > max and rsi_sma[indexes[x] < previous]) or rsi_sma[indexes[x]] <= max) and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/2:
+        elif rsi_sma[indexes[x]] > max and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol'] and bought is True:
                 sold_at, sold_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 sells.append((sold_at, sold_time))
                 bought = False
@@ -153,10 +171,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
                 pnl.append(sold_at - bought_at)
                 print("Bought at {} on {}, Sold at {} on {} Profit/loss {}".format(bought_at, bought_time, sold_at, sold_time, sold_at-bought_at))
                 entered_sell_zone = False
-        elif rsi_sma[indexes[x]] <= min and previous > min and bought is False:
-            entered_buy_zone = True
-        elif rsi_sma[indexes[x]] >= max and previous < max and bought is True:
-            entered_sell_zone = True
+        
         previous = rsi_sma.loc[indexes[x]]
 
     print ("Total Profit: {}".format(total_profit))
@@ -173,10 +188,11 @@ while(True):
     df = pandas.DataFrame.from_dict(full_chart, orient="index")
     logger.info("DF: {}".format(df))
     df = df.sort_values(['date'])
+    add_avg_volume_24hr(df)
     rsi_ewma, rsi_sma = compute_rsi(df)
     rsi_buys, rsi_sells, rsi_val, rsi_pnl = compute_buy_sell_from_rsi(rsi_ewma, lb, ub)
     
-    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla.html")
+    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla_volume.html")
     
     time.sleep(3 * 60)
 
