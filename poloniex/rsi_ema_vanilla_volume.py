@@ -154,7 +154,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
             # if we are still in the zone and rsi starts increasing, BUY IT!
             # or if we stepping outside the zone buy it as well
             #if ((rsi_sma[indexes[x]] < min and rsi_sma[indexes[x]] > previous) or rsi_sma[indexes[x]] >= min) and df.loc[indexes[x]].loc['volume'] > 8 * df.loc[indexes[x]].loc['moving_avg_vol']:
-        if rsi_sma[indexes[x]] < min and df.loc[indexes[x]].loc['volume'] > 2 * df.loc[indexes[x]].loc['moving_avg_vol'] and bought is False:
+        if rsi_sma[indexes[x]] < min and df.loc[indexes[x]].loc['volume'] > 5 * df.loc[indexes[x]].loc['moving_avg_vol'] and bought is False:
                 bought_at, bought_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 buys.append((bought_at, bought_time))
                 bought = True
@@ -162,7 +162,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
                 entered_buy_zone = False
         
             #if ((rsi_sma[indexes[x]] > max and rsi_sma[indexes[x] < previous]) or rsi_sma[indexes[x]] <= max) and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/2:
-        elif rsi_sma[indexes[x]] > max and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol'] and bought is True:
+        elif rsi_sma[indexes[x]] > max and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/6 and bought is True:
                 sold_at, sold_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 sells.append((sold_at, sold_time))
                 bought = False
