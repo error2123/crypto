@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 # Window length for moving average
 rsi_window_length = 14
-currency_pair = "USDT_BTC"
+currency_pair = sys.argv[1]
 
 #current candlestick period
 candle_period = 5
@@ -80,7 +80,7 @@ def render_plotly(df, rsi, rsi_orders, lower_bound, upper_bound, chart_name='can
     print stats_dict
     #stats_dict["Bought_sold"] = "{}".format([
     perf = pandas.DataFrame.from_dict({"performance": stats_dict}, orient="columns").to_html()
-    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_volume_performance.html", "w") as fw:
+    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_volume_performance_{}_{}.html".format(sys.argv[1], sys.argv[2]), "w") as fw:
         fw.write(perf)
     
     data = [trace, trace_buys, trace_sells]
@@ -154,7 +154,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
             # if we are still in the zone and rsi starts increasing, BUY IT!
             # or if we stepping outside the zone buy it as well
             #if ((rsi_sma[indexes[x]] < min and rsi_sma[indexes[x]] > previous) or rsi_sma[indexes[x]] >= min) and df.loc[indexes[x]].loc['volume'] > 8 * df.loc[indexes[x]].loc['moving_avg_vol']:
-        if rsi_sma[indexes[x]] < min and df.loc[indexes[x]].loc['volume'] > 5 * df.loc[indexes[x]].loc['moving_avg_vol'] and bought is False:
+        if rsi_sma[indexes[x]] < min and df.loc[indexes[x]].loc['volume'] > 4 * df.loc[indexes[x]].loc['moving_avg_vol'] and bought is False:
                 bought_at, bought_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 buys.append((bought_at, bought_time))
                 bought = True
@@ -162,7 +162,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
                 entered_buy_zone = False
         
             #if ((rsi_sma[indexes[x]] > max and rsi_sma[indexes[x] < previous]) or rsi_sma[indexes[x]] <= max) and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/2:
-        elif rsi_sma[indexes[x]] > max and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/6 and bought is True:
+        elif rsi_sma[indexes[x]] > max and df.loc[indexes[x]].loc['volume'] < df.loc[indexes[x]].loc['moving_avg_vol']/2 and bought is True:
                 sold_at, sold_time = df.loc[indexes[x]].loc['close'], indexes[x]
                 sells.append((sold_at, sold_time))
                 bought = False
@@ -180,7 +180,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
 
 while(True):
     dates = []
-    for x in xrange(int(sys.argv[1])):
+    for x in xrange(int(sys.argv[2])):
         dates.append("{}###{}".format(currency_pair, (datetime.date.today() - datetime.timedelta(x)).strftime('%Y-%m-%d')))
     logger.info("Getting Datapoints for folllowing dates: {}".format(dates))
     full_chart = batch_read_from_cache(dates)
@@ -192,7 +192,7 @@ while(True):
     rsi_ewma, rsi_sma = compute_rsi(df)
     rsi_buys, rsi_sells, rsi_val, rsi_pnl = compute_buy_sell_from_rsi(rsi_ewma, lb, ub)
     
-    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla_volume.html")
+    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla_volume_{}_{}.html".format(sys.argv[1], sys.argv[2]))
     
     time.sleep(3 * 60)
 

@@ -13,11 +13,14 @@ P = poloniex(APIKey=config.api_key, Secret=config.secret_key)
 
 while(True):
     time_t = time.time()
-    resp = P.returnOrderBook(currencyPair="all")
-    print "TIMESTAMP:", time_t, datetime.datetime.fromtimestamp(int(time_t)).strftime('%Y-%m-%d %H:%M:%S')
-    resp = {'order_book###{}'.format(datetime.datetime.fromtimestamp(int(time_t)).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(resp)}
-    logger.info("RESP: {}".format(resp))
-    batch_write_to_cache(resp)
+    try:
+        resp = P.returnOrderBook(currencyPair="all")
+        print "TIMESTAMP:", time_t, datetime.datetime.fromtimestamp(int(time_t)).strftime('%Y-%m-%d %H:%M:%S')
+        resp = {'order_book###{}'.format(datetime.datetime.fromtimestamp(int(time_t)).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(resp)}
+        #logger.info("RESP: {}".format(resp))
+        batch_write_to_cache(resp)
+    except Exception, e:
+        print e
     time.sleep(30)
 
 

@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 #LOOKBACK_SEC = 60 * 60 * 8
 LOOKBACK_SEC = 60 * 60 * 48
 INTERVAL = 60 * 5
+pair = sys.argv[1]
 
 # ok this will look convoluted, but what I am trying to do below is
 # to expand my start and end times to closest five minute intervals
@@ -29,24 +30,32 @@ t_start_min = t_start / 60
 t_start = t_start - (t_start_min % 5) * 60
 
 P = poloniex(APIKey=config.api_key, Secret=config.secret_key)
-resp = P.returnChartData(currencyPair="USDT_BTC", start=t_start, end=t_end, period=INTERVAL)
+resp = P.returnChartData(currencyPair=pair, start=t_start, end=t_end, period=INTERVAL)
 print resp
-full_chart = {'{}'.format(datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
+full_chart = {'{}###{}'.format(pair, datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
 batch_write_to_cache(full_chart)
 
 while(True):
     logger.info("Start time: {} End time: {}".format(t_start, t_end))
-    resp = P.returnChartData(currencyPair="USDT_BTC", start=t_start, end=t_end, period=INTERVAL)
-    resp = {'{}###{}'.format("USDT_BTC", datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
-    logger.info("RESP: {}".format(resp))
-    batch_write_to_cache(resp)
-    # @todo @logicissues. How to reduce latency in getting new candlesticks but by keeping the
-    # pings low
-    t_start = t_end
-    time.sleep(INTERVAL - 120)
-    # commenting this because going off of the latest time is more robust as it will
-    # pick more data points if it slept for sometime
-    #t_end = t_start + INTERVAL
-    t_end = time.time()
+    try:
+        resp = P.returnChartData(currencyPair=pair, start=t_start, end=t_end, period=INTERVAL)
+        resp = {'{}###{}'.format(pair, datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r) for r in resp}
+        logger.info("RESP: {}".format(resp))
+        batch_write_to_cache(resp)
+        # @todo @logicissues. How to reduce latency in getting new candlesticks but by keeping the
+        # pings low
+        t_start = t_end
+        time.sleep(int(sys.argv[2]))
+        # commenting this because going off of the latest time is more robust as it will
+        # pick more data points if it slept for sometime
+        #t_end = t_start + INTERVAL
+        t_end = time.time()
+    except:
+        time.sleep(int(sys.argv[2]))
+        t_end = time.time()
+
+
+
+        
 
 

@@ -1,0 +1,10 @@
+#python populator_backfill.py USDT_BTC "2014-01-01"  "2017-08-14" 5
+#python populator_backfill.py USDT_ETH "2014-01-01"  "2017-08-14" 5
+nohup python orderbook_populator.py >& orderbook_logs &
+nohup python populator.py "USDT_BTC" 1200 >& logs_usdt_btc &
+nohup python populator.py "USDT_ETH" 1800 >& logs_usdt_eth &
+
+
+# commands to keep track of trades
+#python rsi_ema_vanilla.py USDT_BTC 3
+#python rsi_ema_vanilla_volume.py USDT_ETH 3

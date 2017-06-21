@@ -15,8 +15,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 INTERVAL = 60 * 5
-start_date = sys.argv[1]
-end_date = sys.argv[2]
+pair = sys.argv[1]
+start_date = sys.argv[2]
+end_date = sys.argv[3]
 P = poloniex(APIKey=config.api_key, Secret=config.secret_key)
 #import ipdb; ipdb.set_trace()
 start_ut = time.mktime(datetime.datetime.strptime(start_date, "%Y-%m-%d").timetuple())
@@ -28,11 +29,12 @@ tmp_end = start_ut + (60 * 60 * 24 * 30)
 while(tmp_end < end_ut):
     logger.info("Start time: {} End time: {}".format(datetime.datetime.fromtimestamp(tmp_start),
                                                      datetime.datetime.fromtimestamp(tmp_end)))
-    resp = P.returnChartData(currencyPair="USDT_BTC", start=tmp_start, end=tmp_end, period=INTERVAL)
-    resp = {'{}###{}'.format("USDT_BTC", datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r)
+    resp = P.returnChartData(currencyPair=pair, start=tmp_start, end=tmp_end, period=INTERVAL)
+    resp = {'{}###{}'.format(pair, datetime.datetime.fromtimestamp(int(r["date"])).strftime('%Y-%m-%d %H:%M:%S')): json.dumps(r)
             for r in resp}
     logger.info("RESP: {}".format(resp))
     batch_write_to_cache(resp)
     tmp_start = tmp_end
     tmp_end = tmp_start + (60 * 60 * 24 * 30)
-    time.sleep(30)
+    time.sleep(int(sys.argv[4]))
+    

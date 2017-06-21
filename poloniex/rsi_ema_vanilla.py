@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Window length for moving average
 rsi_window_length = 14
-currency_pair = "USDT_BTC"
+currency_pair = sys.argv[1]
 
 # bin limits for the histogram @todo change it when playing with a bigger amount
 negative = -500
@@ -75,7 +75,7 @@ def render_plotly(df, rsi, rsi_orders, lower_bound, upper_bound, chart_name='can
     print stats_dict
     #stats_dict["Bought_sold"] = "{}".format([
     perf = pandas.DataFrame.from_dict({"performance": stats_dict}, orient="columns").to_html()
-    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_performance.html", "w") as fw:
+    with open("charts/rsi_ema_vanilla/rsi_ema_vanilla_performance_{}_{}.html".format(sys.argv[1], sys.argv[2]), "w") as fw:
         fw.write(perf)
     
     data = [trace, trace_buys, trace_sells]
@@ -165,7 +165,7 @@ def compute_buy_sell_from_rsi(rsi_sma, min, max):
 
 while(True):
     dates = []
-    for x in xrange(int(sys.argv[1])):
+    for x in xrange(int(sys.argv[2])):
         dates.append("{}###{}".format(currency_pair, (datetime.date.today() - datetime.timedelta(x)).strftime('%Y-%m-%d')))
     logger.info("Getting Datapoints for folllowing dates: {}".format(dates))
     full_chart = batch_read_from_cache(dates)
@@ -176,7 +176,7 @@ while(True):
     rsi_ewma, rsi_sma = compute_rsi(df)
     rsi_buys, rsi_sells, rsi_val, rsi_pnl = compute_buy_sell_from_rsi(rsi_ewma, lb, ub)
     
-    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla.html")
+    render_plotly(df, rsi_ewma, [rsi_buys, rsi_sells, rsi_val, rsi_pnl], lb, ub, "charts/rsi_ema_vanilla/rsi_ema_vanilla_{}_{}.html".format(sys.argv[1], sys.argv[2]))
     
     time.sleep(3 * 60)
 
