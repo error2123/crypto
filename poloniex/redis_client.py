@@ -9,7 +9,11 @@ redis_cli = redis.StrictRedis(host=config.redis_ip,
                               port=config.redis_port,
                               db=config.redis_db)
 
-def put_in_cache(hash_key, output, ttl=config.redis_ttl):
+redis_cli_ob = redis.StrictRedis(host=config.redis_ip,
+                              port=config.redis_port,
+                              db=config.redis_ob_db)
+
+def put_in_cache(hash_key, output, ttl=config.redis_ttl, client=redis_cli):
     """
     cahe the video object
     :param hash_key: doc id from solr
@@ -18,9 +22,9 @@ def put_in_cache(hash_key, output, ttl=config.redis_ttl):
     :return:
     """
     logger.debug("Attempting to write key-value {} {} to redis".format(hash_key, output))
-    return redis_cli.set(hash_key, output, ex=ttl)
+    return client.set(hash_key, output, ex=ttl)
 
-def get_from_cache(hash_key):
+def get_from_cache(hash_key, client=redis_cli):
     """
     get the serialized video object from redis
     :param hash_key: solr doc id
@@ -43,7 +47,7 @@ def get_keys_by_pattern(pattern):
 
 #@todo all these batch functions can be made more efficient @performanceimprovement
 # make sure all json calls are  using cjson as well
-def batch_write_to_cache(objs, ttl=config.redis_ttl):
+def batch_write_to_cache(objs, ttl=config.redis_ttl, client=redis_cli):
     """
     cahe the video object
     :param hash_key: doc id from solr
@@ -53,11 +57,11 @@ def batch_write_to_cache(objs, ttl=config.redis_ttl):
     """
     for x in objs:
         logger.debug("Attempting to write key-value {} {} to redis".format(x, objs[x]))
-        put_in_cache(x, objs[x])
+        put_in_cache(x, objs[x],client=client)
 
 
 
-def batch_read_from_cache(dates):
+def batch_read_from_cache(dates, client=redis_cli):
     """
     Tries to retrieve a batch of keys and returns a tuple  of video
     objects and a list of uncached keys
@@ -69,7 +73,7 @@ def batch_read_from_cache(dates):
         # @todo is there a interface to read all keys in one go?
         keys = get_keys_by_pattern('{}*'.format(date))
         for key in keys:
-            obj = get_from_cache(key)
+            obj = get_from_cache(key, client=client)
             objs[key] = json.loads(obj)
     return objs
 

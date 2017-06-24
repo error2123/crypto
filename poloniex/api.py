@@ -31,10 +31,13 @@ class poloniex:
             ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + command))
             return json.loads(ret.read())
         elif(command == "returnOrderBook"):
-            ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + command + '&currencyPair=' + str(req['currencyPair']) + '&depth=2000'))
+            ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + command + '&currencyPair=' + str(req['currencyPair']) + '&depth=100'))
             return json.loads(ret.read())
         elif(command == "returnMarketTradeHistory"):
-            ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + "returnTradeHistory" + '&currencyPair=' + str(req['currencyPair'])))
+            ret = urllib2.urlopen(urllib2.Request('https://poloniex.com/public?command=' + "returnTradeHistory" +
+                                                  '&currencyPair=' + str(req['currencyPair']) +
+                                                  '&start=' + str(req['start']) +
+                                                  '&end=' + str(req['end'])))
             return json.loads(ret.read())
         elif (command == "returnChartData"):
             ret = urllib2.urlopen(urllib2.Request(
@@ -66,15 +69,16 @@ class poloniex:
     def returnOrderBook (self, currencyPair):
         return self.api_query("returnOrderBook", {'currencyPair': currencyPair})
 
-    def returnMarketTradeHistory (self, currencyPair):
-        return self.api_query("returnMarketTradeHistory", {'currencyPair': currencyPair})
+    def returnMarketTradeHistory (self, currencyPair, start, end):
+        return self.api_query("returnMarketTradeHistory", {'currencyPair': currencyPair,
+                                                           'start': start,
+                                                           'end': end})
 
     def returnChartData (self, currencyPair, start, end, period):
         return self.api_query("returnChartData", {'currencyPair': currencyPair,
                                                   'start': start,
                                                   'end': end,
-                                                  'period': period
-                                                })
+                                                  'period': period})
 
     # Returns all of your balances.
     # Outputs: 
